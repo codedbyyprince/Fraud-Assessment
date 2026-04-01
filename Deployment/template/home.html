@@ -3,64 +3,230 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fraud Assessment</title>
+    <title>Fraud Assessment Setup</title>
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f4f7f9; color: #333;}
+        .container { max-width: 650px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s ease;}
+        h1 { margin-top: 0; font-size: 24px; color: #1a1a1a; }
+        select, input[type="file"], input[type="number"], button { padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; width: 100%; box-sizing: border-box; }
+        button { background-color: #0078d4; color: white; border: none; font-weight: bold; cursor: pointer; margin-top: 20px;}
+        button:hover { background-color: #005a9e; }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .form-group { margin-bottom: 20px; }
+        .threshold-input { margin-top: 10px; padding: 15px; border: 1px solid #ddd; background: #fafafa; border-radius: 5px;}
+        .metrics-box { margin-top: 15px; padding: 10px; background: #eef2f5; border: 1px solid #ccd; border-radius: 4px; }
+        .metrics-box p { margin: 5px 0; font-family: monospace; font-size: 14px;}
+        #status { margin-top: 20px; padding: 15px; border: 1px solid #b3d4fc; background: #e6f0fa; border-radius: 5px; display: none; }
+        .step { margin: 5px 0; color: #555; }
+        .step.active { color: #0078d4; font-weight: bold; }
+        .step.done { color: #107c10; }
+        .error { color: #a4262c; }
+
+        /* Mini Workspace Styles */
+        #miniWorkspace { display: none; margin-top: 20px; padding-top: 20px; border-top: 2px solid #eee;}
+        .action-buttons { display: flex; gap: 10px; margin-bottom: 15px; }
+        .action-buttons button { margin-top: 0; }
+        .btn-expand { background-color: #107c10; }
+        .btn-expand:hover { background-color: #0c5e0c; }
+    </style>
 </head>
 <body>
-    <h1>Fraud Assessment</h1>
-    <form action="/upload" enctype="multipart/form-data" method="POST">
+    <div class="container" id="mainContainer">
+        
+        <div id="setupSection">
+            <h1>Fraud Assessment Setup</h1>
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="Model"><strong>1. Select Model Pipeline</strong></label>
+                    <select name="Model" id="Model" required>
+                        <option value="">Select a model...</option>
+                        <option value="Apex 1.0">Apex 1.0 (Oracle / Ensembled)</option>
+                        <option value="Core XGB">Core XGBoost</option>
+                        <option value="Core LGB">Core LightGBM</option>
+                        <option value="Core RF">Core Random Forest</option>
+                    </select>
+                </div>
 
-        <label for="Model">Select Model</label>
-        <select name="Model" id="Model">
-            <option value="">Select</option>
-            <option value="XG Boost">XG Boost</option>
-            <option value="RF_Clf">RF_Clf</option>
-            <option value="Light GB">Light GB</option>
-            <option value="Confidence">Oracle</option>
-        </select>
+                <div id="thresholdDiv" style="display: none;" class="threshold-input">
+                    <label for="threshold"><strong>Fraud Confirmation Threshold (%)</strong></label>
+                    <input type="number" id="threshold" name="threshold" step="1" min="0" max="100" value="50">
+                </div>
 
-        <div id="model-options" style="display: none;">
-            <h3>Options</h3>
-            <div id="precision-recall-options">
-                <input type="checkbox" id="precision" name="options" value="precision">
-                <label for="precision">Precision</label><br>
-                <input type="checkbox" id="recall" name="options" value="recall">
-                <label for="recall">Recall</label><br>
-            </div>
-            <div id="confidence-options" style="display: none;">
-                <input type="checkbox" id="confidence_score" name="options" value="confidence_score">
-                <label for="confidence_score">Confidence Score</label><br>
-                <input type="checkbox" id="direct_prediction" name="options" value="direct_prediction">
-                <label for="direct_prediction">Direct Prediction (Fraud/Non-Fraud)</label><br>
+                <div id="prControls" style="display: none;" class="threshold-input">
+                    <label for="pr_mode"><strong>Target Metric Constraint:</strong></label>
+                    <select name="pr_mode" id="pr_mode">
+                        <option value="threshold">Manual Threshold</option>
+                        <option value="precision">Target Precision</option>
+                        <option value="recall">Target Recall</option>
+                    </select>
+                    <label style="display:block; margin-top:15px;"><strong>Value: </strong><span id="sliderValueDisplay">50</span>%</label>
+                    <input type="range" id="pr_value" name="pr_value" min="0" max="100" step="1" value="50" style="width: 100%;">
+                    <div class="metrics-box">
+                        <p>Threshold Applied : <strong id="display_t">0.5000</strong></p>
+                        <p>Estimated Precision : <strong id="display_p">--</strong> %</p>
+                        <p>Estimated Recall    : <strong id="display_r">--</strong> %</p>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 20px;">
+                    <label for="fileToUpload"><strong>2. Upload Dataset (CSV)</strong></label>
+                    <input type="file" id="fileToUpload" name="fileToUpload" accept=".csv" required>
+                </div>
+                <button type="submit" id="submitBtn">Process Dataset</button>
+            </form>
+
+            <div id="status">
+                <h3 style="margin-top: 0;">Execution Progress:</h3>
+                <div id="step1" class="step">⏳ Uploading file...</div>
+                <div id="step2" class="step">⏳ Normalizing & Cleaning...</div>
+                <div id="step3" class="step">⏳ Generating Predictions...</div>
+                <div id="step4" class="step">⏳ Finalizing Output...</div>
             </div>
         </div>
 
-        <label for="file-upload-field">Select a data:</label>
-        <input type="file" id="file-upload-field" name="fileToUpload">
+        <div id="miniWorkspace">
+            <h2>✅ Analysis Complete!</h2>
+            <div class="action-buttons">
+                <button id="downloadBtn">📥 Quick Download CSV</button>
+                <button id="expandBtn" class="btn-expand">↗️ Open Full Data Wrangler</button>
+            </div>
+            
+            <p style="font-size: 13px; color: #666; margin-bottom: 5px;">Data Preview (First 10 rows):</p>
+            <div id="miniGrid" class="ag-theme-alpine" style="height: 350px; width: 100%; border: 1px solid #ccc; border-radius: 4px;"></div>
+            
+            <button onclick="location.reload()" style="background-color: #555; margin-top: 15px;">↺ Start New File</button>
+        </div>
 
-        <input type="submit" value="Upload">
-
-    </form>
+    </div>
 
     <script>
         const modelSelect = document.getElementById('Model');
-        const modelOptions = document.getElementById('model-options');
-        const precisionRecallOptions = document.getElementById('precision-recall-options');
-        const confidenceOptions = document.getElementById('confidence-options');
+        const thresholdDiv = document.getElementById('thresholdDiv');
+        const prControls = document.getElementById('prControls');
+        const prMode = document.getElementById('pr_mode');
+        const prValueSlider = document.getElementById('pr_value');
+        const form = document.getElementById('uploadForm');
+        const statusDiv = document.getElementById('status');
+        const submitBtn = document.getElementById('submitBtn');
+        const setupSection = document.getElementById('setupSection');
+        const miniWorkspace = document.getElementById('miniWorkspace');
+        const mainContainer = document.getElementById('mainContainer');
 
-        modelSelect.addEventListener('change', function() {
-            const selectedModel = this.value;
-            if (selectedModel === 'XG Boost' || selectedModel === 'RF_Clf' || selectedModel === 'Light GB') {
-                modelOptions.style.display = 'block';
-                precisionRecallOptions.style.display = 'block';
-                confidenceOptions.style.display = 'none';
-            } else if (selectedModel === 'Confidence') {
-                modelOptions.style.display = 'block';
-                precisionRecallOptions.style.display = 'none';
-                confidenceOptions.style.display = 'block';
-            } else {
-                modelOptions.style.display = 'none';
+        const stepElements = {
+            1: document.getElementById('step1'), 2: document.getElementById('step2'),
+            3: document.getElementById('step3'), 4: document.getElementById('step4')
+        };
+        const apiModelMap = { 'Core XGB': 'xgb', 'Core LGB': 'lgb', 'Core RF': 'rf' };
+
+        let currentFileId = null;
+
+        modelSelect.addEventListener('change', () => {
+            const val = modelSelect.value;
+            if (val === 'Apex 1.0') { thresholdDiv.style.display = 'block'; prControls.style.display = 'none'; } 
+            else if (apiModelMap[val]) { thresholdDiv.style.display = 'none'; prControls.style.display = 'block'; fetchPRInfo(); } 
+            else { thresholdDiv.style.display = 'none'; prControls.style.display = 'none'; }
+        });
+
+        prMode.addEventListener('change', fetchPRInfo);
+        prValueSlider.addEventListener('input', () => { document.getElementById('sliderValueDisplay').textContent = prValueSlider.value; fetchPRInfo(); });
+
+        async function fetchPRInfo() {
+            const modelName = modelSelect.value;
+            if (!apiModelMap[modelName]) return;
+            try {
+                const response = await fetch(`/pr_info?model=${apiModelMap[modelName]}&mode=${prMode.value}&value=${prValueSlider.value}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('display_t').textContent = data.threshold.toFixed(4);
+                    document.getElementById('display_p').textContent = data.precision.toFixed(2);
+                    document.getElementById('display_r').textContent = data.recall.toFixed(2);
+                }
+            } catch (error) { console.error("PR fetch failed"); }
+        }
+
+        function updateStep(step, status) {
+            const el = stepElements[step];
+            if (status === 'active') { el.innerHTML = '▶ ' + el.textContent.slice(2); el.className = 'step active'; } 
+            else if (status === 'done') { el.innerHTML = '✓ ' + el.textContent.slice(2); el.className = 'step done'; } 
+            else if (status === 'error') { el.innerHTML = '✗ ' + el.textContent.slice(2); el.className = 'step error'; }
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+            submitBtn.disabled = true;
+            statusDiv.style.display = 'block';
+
+            [1, 2, 3, 4].forEach(i => { stepElements[i].innerHTML = '⏳ ' + stepElements[i].textContent.slice(2); stepElements[i].className = 'step'; });
+
+            try {
+                updateStep(1, 'active'); await new Promise(r => setTimeout(r, 200)); updateStep(1, 'done');
+                updateStep(2, 'active'); await new Promise(r => setTimeout(r, 300)); updateStep(2, 'done');
+                updateStep(3, 'active');
+                
+                const response = await fetch('/predict', { method: 'POST', body: formData });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Prediction failed');
+
+                updateStep(3, 'done');
+                updateStep(4, 'active'); await new Promise(r => setTimeout(r, 200)); updateStep(4, 'done');
+
+                currentFileId = result.file_id;
+                
+                // Hide Setup, Show Mini Workspace
+                setupSection.style.display = 'none';
+                mainContainer.style.maxWidth = "800px"; // Expand box slightly for table
+                miniWorkspace.style.display = 'block';
+
+                // Setup the Mini Preview Grid
+                initMiniGrid(result.columns, currentFileId);
+
+            } catch (error) {
+                updateStep(3, 'error');
+                statusDiv.innerHTML += `<p class="error" style="margin-top:10px;">Error: ${error.message}</p>`;
+                submitBtn.disabled = false;
             }
         });
+
+        // Setup Buttons
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            if (currentFileId) window.location.href = `/download_csv?file_id=${currentFileId}`;
+        });
+        document.getElementById('expandBtn').addEventListener('click', () => {
+            if (currentFileId) window.location.href = `/results?file_id=${currentFileId}`;
+        });
+
+        // Initialize AG Grid
+        async function initMiniGrid(columns, fileId) {
+            const columnDefs = columns.map(col => {
+                if (col === 'fraud_prediction' || col === 'fraud_probability') {
+                    return { field: col, pinned: 'left', width: 150 };
+                }
+                return { field: col };
+            });
+
+            const gridOptions = {
+                columnDefs: columnDefs,
+                rowData: [],
+                defaultColDef: { resizable: true, sortable: false, filter: false }, // Keep it simple for preview
+            };
+
+            const eGridDiv = document.querySelector('#miniGrid');
+            const gridApi = agGrid.createGrid(eGridDiv, gridOptions);
+            
+            gridApi.showLoadingOverlay();
+            try {
+                // Fetch just 10 rows for preview
+                const response = await fetch(`/get_page?file_id=${fileId}&page=1&size=10`);
+                const data = await response.json();
+                if (response.ok) {
+                    if (gridApi.setGridOption) { gridApi.setGridOption('rowData', data); } 
+                    else { gridApi.setRowData(data); }
+                }
+            } catch (err) { console.error(err); }
+            gridApi.hideOverlay();
+        }
     </script>
 </body>
 </html>
