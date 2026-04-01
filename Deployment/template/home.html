@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraud Assessment</title>
+</head>
+<body>
+    <h1>Fraud Assessment</h1>
+    <form action="/upload" enctype="multipart/form-data" method="POST">
+
+        <label for="Model">Select Model</label>
+        <select name="Model" id="Model">
+            <option value="">Select</option>
+            <option value="XG Boost">XG Boost</option>
+            <option value="RF_Clf">RF_Clf</option>
+            <option value="Light GB">Light GB</option>
+            <option value="Confidence">Oracle</option>
+        </select>
+
+        <div id="model-options" style="display: none;">
+            <h3>Options</h3>
+            <div id="precision-recall-options">
+                <input type="checkbox" id="precision" name="options" value="precision">
+                <label for="precision">Precision</label><br>
+                <input type="checkbox" id="recall" name="options" value="recall">
+                <label for="recall">Recall</label><br>
+            </div>
+            <div id="confidence-options" style="display: none;">
+                <input type="checkbox" id="confidence_score" name="options" value="confidence_score">
+                <label for="confidence_score">Confidence Score</label><br>
+                <input type="checkbox" id="direct_prediction" name="options" value="direct_prediction">
+                <label for="direct_prediction">Direct Prediction (Fraud/Non-Fraud)</label><br>
+            </div>
+        </div>
+
+        <label for="file-upload-field">Select a data:</label>
+        <input type="file" id="file-upload-field" name="fileToUpload">
+
+        <input type="submit" value="Upload">
+
+    </form>
+
+    <script>
+        const modelSelect = document.getElementById('Model');
+        const modelOptions = document.getElementById('model-options');
+        const precisionRecallOptions = document.getElementById('precision-recall-options');
+        const confidenceOptions = document.getElementById('confidence-options');
+
+        modelSelect.addEventListener('change', function() {
+            const selectedModel = this.value;
+            if (selectedModel === 'XG Boost' || selectedModel === 'RF_Clf' || selectedModel === 'Light GB') {
+                modelOptions.style.display = 'block';
+                precisionRecallOptions.style.display = 'block';
+                confidenceOptions.style.display = 'none';
+            } else if (selectedModel === 'Confidence') {
+                modelOptions.style.display = 'block';
+                precisionRecallOptions.style.display = 'none';
+                confidenceOptions.style.display = 'block';
+            } else {
+                modelOptions.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
