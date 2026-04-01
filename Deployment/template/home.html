@@ -29,6 +29,25 @@
         .action-buttons button { margin-top: 0; }
         .btn-expand { background-color: #107c10; }
         .btn-expand:hover { background-color: #0c5e0c; }
+
+        .btn-stats {
+    background: linear-gradient(145deg, #1e3c72, #2a5298);
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 0 #11264c, 0 5px 10px rgba(0,0,0,0.3);
+    transition: all 0.1s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.btn-stats:active {
+    box-shadow: 0 0 0 #11264c, 0 2px 5px rgba(0,0,0,0.3);
+    transform: translateY(4px);
+}
     </style>
 </head>
 <body>
@@ -87,6 +106,12 @@
 
         <div id="miniWorkspace">
             <h2>✅ Analysis Complete!</h2>
+
+            <div class="action-buttons">
+    <button id="downloadBtn">📥 Quick Download</button>
+    <button id="expandBtn" class="btn-expand">↗️ Full Wrangler</button>
+    <button id="statsBtn" class="btn-stats" onclick="window.location.href='/stats?file_id=' + currentFileId">📊 View 3D Analytics</button>
+</div>
             <div class="action-buttons">
                 <button id="downloadBtn">📥 Quick Download CSV</button>
                 <button id="expandBtn" class="btn-expand">↗️ Open Full Data Wrangler</button>

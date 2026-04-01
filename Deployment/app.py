@@ -166,5 +166,56 @@ def download_csv():
     if os.path.exists(filepath): return send_file(filepath, as_attachment=True, download_name='fraud_predictions.csv')
     return "File not found", 404
 
+# --- NEW ANALYTICS DASHBOARD ROUTES ---
+
+@app.route('/stats', methods=['GET'])
+def stats_page():
+    file_id = request.args.get('file_id')
+    filepath = os.path.join(TEMP_DIR, f"{file_id}.csv")
+    if not file_id or not os.path.exists(filepath):
+        return "File not found.", 404
+    return render_template('stats.html', file_id=file_id)
+
+@app.route('/api/stats_data', methods=['GET'])
+def get_stats_data():
+    file_id = request.args.get('file_id')
+    filepath = os.path.join(TEMP_DIR, f"{file_id}.csv")
+    if not os.path.exists(filepath):
+        return jsonify({"error": "File not found"}), 404
+
+    try:
+        # Load the predictions
+        df = pd.read_csv(filepath)
+
+        # Basic Stats
+        total_tx = len(df)
+        total_fraud = int(df['fraud_prediction'].sum())
+        fraud_pct = round((total_fraud / total_tx) * 100, 2) if total_tx > 0 else 0
+
+        # Top 5 Suspicious Transactions
+        # Ensure transaction_id exists, otherwise fallback to row index
+        if 'transaction_id' not in df.columns:
+            df['transaction_id'] = ["TXN_" + str(i) for i in df.index]
+            
+        top_sus = df.sort_values(by='fraud_probability', ascending=False).head(5)
+        top_list = top_sus[['transaction_id', 'fraud_probability']].to_dict(orient='records')
+
+        # Probability Distribution (For the Bar Chart)
+        bins = [0, 20, 40, 60, 80, 100]
+        labels = ['0-20%', '20-40%', '40-60%', '60-80%', '80-100%']
+        df['prob_bin'] = pd.cut(df['fraud_probability'], bins=bins, labels=labels, include_lowest=True)
+        dist_counts = df['prob_bin'].value_counts().reindex(labels).fillna(0).astype(int).tolist()
+
+        return jsonify({
+            "total": total_tx,
+            "frauds": total_fraud,
+            "fraud_pct": fraud_pct,
+            "top_suspicious": top_list,
+            "dist_labels": labels,
+            "dist_counts": dist_counts
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

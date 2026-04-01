@@ -24,6 +24,25 @@
         .page-actions button:hover:not(:disabled) { background-color: #555; }
         .page-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
         select { background: #444; color: #fff; border: 1px solid #555; padding: 2px 5px;}
+
+        .btn-stats {
+            background: linear-gradient(145deg, #1e3c72, #2a5298);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #11264c, 0 5px 10px rgba(0,0,0,0.3);
+            transition: all 0.1s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-stats:active {
+            box-shadow: 0 0 0 #11264c, 0 2px 5px rgba(0,0,0,0.3);
+            transform: translateY(4px);
+        }
     </style>
 </head>
 <body>
@@ -32,6 +51,7 @@
         <div class="header-bar">
             <h1>Data Wrangler (Full View)</h1>
             <div>
+                <button class="btn-stats" onclick="window.location.href='/stats?file_id={{ file_id }}'" style="margin-right: 10px;">📊 View Analytics</button>
                 <button class="btn-back" onclick="window.location.href='/'">↺ Back to Setup</button>
                 <button class="btn-download" onclick="window.location.href='/download_csv?file_id={{ file_id }}'">📥 Download Full CSV</button>
             </div>
