@@ -102,8 +102,16 @@ def select_features(df):
 
 def process_csv(file):
     required = [
-        'transaction_id', 'user_browser', 'user_os', 'card_type',
-        'transaction_time', 'transaction_amount', 'device_type'
+    "transaction_id",
+    "transaction_time",
+    "transaction_amount",
+    "card_network",
+    "card_type",
+    "purchaser_email_domain",
+    "device_type",
+    "is_identity_seen_before",
+    "user_os",
+    "user_browser"
     ]
     df = pd.read_csv(file)
     df.columns = df.columns.str.strip().str.replace(r'^\ufeff', '', regex=True)
