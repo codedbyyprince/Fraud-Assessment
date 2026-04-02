@@ -3,295 +3,479 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fraud Assessment Setup</title>
+    <title>FraudSense — Assessment Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f4f7f9; color: #333;}
-        .container { max-width: 650px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.3s ease;}
-        h1 { margin-top: 0; font-size: 24px; color: #1a1a1a; }
-        select, input[type="file"], input[type="number"], button { padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; width: 100%; box-sizing: border-box; }
-        button { background-color: #0078d4; color: white; border: none; font-weight: bold; cursor: pointer; margin-top: 20px;}
-        button:hover { background-color: #005a9e; }
-        button:disabled { opacity: 0.6; cursor: not-allowed; }
-        .form-group { margin-bottom: 20px; }
-        .threshold-input { margin-top: 10px; padding: 15px; border: 1px solid #ddd; background: #fafafa; border-radius: 5px;}
-        .metrics-box { margin-top: 15px; padding: 10px; background: #eef2f5; border: 1px solid #ccd; border-radius: 4px; }
-        .metrics-box p { margin: 5px 0; font-family: monospace; font-size: 14px;}
-        #status { margin-top: 20px; padding: 15px; border: 1px solid #b3d4fc; background: #e6f0fa; border-radius: 5px; display: none; }
-        .step { margin: 5px 0; color: #555; }
-        .step.active { color: #0078d4; font-weight: bold; }
-        .step.done { color: #107c10; }
-        .error { color: #a4262c; }
-
-        /* Mini Workspace Styles */
-        #miniWorkspace { display: none; margin-top: 20px; padding-top: 20px; border-top: 2px solid #eee;}
-        .action-buttons { display: flex; gap: 10px; margin-bottom: 15px; }
-        .action-buttons button { margin-top: 0; }
-        .btn-expand { background-color: #107c10; }
-        .btn-expand:hover { background-color: #0c5e0c; }
-        .btn-danger { background-color: #a4262c; margin-top: 15px; }
-        .btn-danger:hover { background-color: #8c1d22; }
-
-        .btn-stats {
-            background: linear-gradient(145deg, #1e3c72, #2a5298);
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 4px 0 #11264c, 0 5px 10px rgba(0,0,0,0.3);
-            transition: all 0.1s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
+        :root {
+            --bg: #f0f2f5;
+            --surface: #ffffff;
+            --surface2: #f8f9fa;
+            --border: #dee2e6;
+            --blue: #3b5bdb;
+            --blue-hover: #2f4bc7;
+            --blue-light: #eef1fd;
+            --red: #c92a2a;
+            --red-light: #fff5f5;
+            --green: #2b7d3b;
+            --green-light: #f0faf2;
+            --amber: #d97706;
+            --text: #1a1d23;
+            --text-sec: #495057;
+            --text-muted: #868e96;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow: 0 4px 12px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.04);
+            --r: 8px;
+            --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
-        .btn-stats:active {
-            box-shadow: 0 0 0 #11264c, 0 2px 5px rgba(0,0,0,0.3);
-            transform: translateY(4px);
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; line-height: 1.5; }
+
+        nav {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            height: 54px;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 28px;
+            box-shadow: var(--shadow-sm);
+            position: sticky; top: 0; z-index: 100;
         }
+        .nav-left { display: flex; align-items: center; gap: 14px; }
+        .nav-logo {
+            font-weight: 700; font-size: 15px; color: var(--blue);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .nav-logo-box {
+            width: 28px; height: 28px; background: var(--blue); border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 12px; font-weight: 700;
+        }
+        .nav-sep { width: 1px; height: 20px; background: var(--border); }
+        .nav-page { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+        .nav-badge {
+            font-size: 11px; font-weight: 600; color: var(--text-muted);
+            background: var(--surface2); border: 1px solid var(--border);
+            padding: 2px 10px; border-radius: 20px; letter-spacing: 0.03em;
+        }
+
+        .main { max-width: 700px; margin: 0 auto; padding: 32px 20px 48px; transition: max-width 0.3s ease; }
+        .main.wide { max-width: 1080px; }
+
+        .page-hd { margin-bottom: 22px; }
+        .page-hd h1 { font-size: 19px; font-weight: 700; letter-spacing: -0.3px; }
+        .page-hd p { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); box-shadow: var(--shadow-sm); overflow: hidden; }
+        .card-hdr {
+            padding: 14px 20px; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .card-hdr-title { font-size: 13px; font-weight: 600; }
+        .card-hdr-sub { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+        .card-body { padding: 20px; }
+
+        .step-lbl {
+            font-size: 11px; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.07em; color: var(--text-muted); margin-bottom: 8px;
+            display: flex; align-items: center; gap: 7px;
+        }
+        .step-n {
+            width: 18px; height: 18px; background: var(--blue); color: white;
+            border-radius: 50%; font-size: 10px; font-weight: 700;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+
+        .form-grp { margin-bottom: 20px; }
+
+        .model-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .model-opt {
+            border: 1.5px solid var(--border); border-radius: var(--r); padding: 12px 14px;
+            cursor: pointer; transition: all 0.13s; background: var(--surface);
+        }
+        .model-opt:hover { border-color: var(--blue); background: var(--blue-light); }
+        .model-opt.selected { border-color: var(--blue); background: var(--blue-light); box-shadow: 0 0 0 3px rgba(59,91,219,0.1); }
+        .model-opt-name { font-size: 13px; font-weight: 600; color: var(--text); }
+        .model-opt.selected .model-opt-name { color: var(--blue); }
+        .model-opt-desc { font-size: 11px; color: var(--text-muted); margin-top: 3px; line-height: 1.4; }
+        .model-opt-tag {
+            display: inline-block; margin-top: 6px; font-size: 10px; font-weight: 600;
+            color: var(--blue); background: white; border: 1px solid rgba(59,91,219,0.25);
+            padding: 1px 7px; border-radius: 4px; letter-spacing: 0.04em;
+        }
+
+        .ctrl-box {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: var(--r); padding: 16px 18px; margin-top: 12px; display: none;
+        }
+        .ctrl-box.vis { display: block; }
+        .ctrl-lbl { font-size: 12px; font-weight: 600; color: var(--text-sec); margin-bottom: 10px; }
+
+        .slider-row { display: flex; align-items: center; gap: 14px; }
+        input[type="range"] {
+            flex: 1; height: 4px; appearance: none; background: var(--border);
+            border-radius: 2px; cursor: pointer; outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none; width: 18px; height: 18px; background: var(--blue);
+            border-radius: 50%; cursor: pointer; border: 2px solid white;
+            box-shadow: 0 1px 4px rgba(59,91,219,0.35);
+        }
+        .slider-disp { font-size: 18px; font-weight: 700; color: var(--blue); min-width: 52px; text-align: right; }
+        .slider-hint { font-size: 11px; color: var(--text-muted); margin-top: 7px; }
+
+        .metrics-row {
+            display: grid; grid-template-columns: 1fr 1fr 1fr;
+            gap: 1px; border: 1px solid var(--border); border-radius: 6px;
+            overflow: hidden; margin-top: 12px; background: var(--border);
+        }
+        .metric-c { background: var(--surface); padding: 10px 14px; }
+        .metric-c label { display: block; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); margin-bottom: 3px; }
+        .metric-c span { font-size: 16px; font-weight: 700; color: var(--blue); }
+
+        select {
+            width: 100%; padding: 9px 32px 9px 12px; border: 1.5px solid var(--border);
+            border-radius: 6px; background: var(--surface); color: var(--text);
+            font-family: var(--font); font-size: 13px; appearance: none; cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' viewBox='0 0 12 7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23868e96' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 12px center;
+        }
+        select:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(59,91,219,0.12); }
+
+        .file-zone {
+            border: 2px dashed var(--border); border-radius: var(--r);
+            padding: 30px 20px; text-align: center; cursor: pointer;
+            transition: all 0.13s; position: relative; background: var(--surface);
+        }
+        .file-zone:hover, .file-zone.drag { border-color: var(--blue); background: var(--blue-light); }
+        .file-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+        .file-zone-icon { font-size: 26px; margin-bottom: 8px; }
+        .file-zone-txt { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+        .file-zone-txt strong { color: var(--blue); }
+        .file-picked { margin-top: 8px; font-size: 12px; font-weight: 600; color: var(--green); }
+
+        .btn-primary {
+            width: 100%; padding: 12px; background: var(--blue); color: white;
+            border: none; border-radius: 6px; font-family: var(--font); font-size: 14px;
+            font-weight: 600; cursor: pointer; transition: all 0.13s; margin-top: 4px;
+        }
+        .btn-primary:hover:not(:disabled) { background: var(--blue-hover); box-shadow: 0 4px 12px rgba(59,91,219,0.22); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .prog-box { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); padding: 16px 18px; margin-top: 14px; display: none; }
+        .prog-box.vis { display: block; }
+        .prog-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); margin-bottom: 12px; }
+        .p-step { display: flex; align-items: center; gap: 10px; padding: 5px 0; font-size: 13px; color: var(--text-muted); transition: color 0.2s; }
+        .p-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); flex-shrink: 0; transition: background 0.2s; }
+        .p-step.active { color: var(--blue); }
+        .p-step.active .p-dot { background: var(--blue); box-shadow: 0 0 0 3px rgba(59,91,219,0.18); }
+        .p-step.done { color: var(--green); }
+        .p-step.done .p-dot { background: var(--green); }
+        .p-step.error { color: var(--red); }
+        .p-step.error .p-dot { background: var(--red); }
+        .err-banner { margin-top: 12px; padding: 10px 14px; background: var(--red-light); border: 1px solid rgba(201,42,42,0.2); border-radius: 6px; font-size: 12px; color: var(--red); }
+
+        #workspaceSection { display: none; }
+        .action-bar { display: flex; align-items: center; gap: 8px; padding: 12px 18px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+        .btn-act {
+            padding: 7px 14px; border: 1.5px solid var(--border); border-radius: 6px;
+            background: var(--surface); color: var(--text-sec); font-family: var(--font);
+            font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.13s;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .btn-act:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+        .btn-act.primary { background: var(--blue); color: white; border-color: var(--blue); }
+        .btn-act.primary:hover { background: var(--blue-hover); }
+        .btn-act.danger { color: var(--red); border-color: rgba(201,42,42,0.3); }
+        .btn-act.danger:hover { background: var(--red-light); border-color: var(--red); }
+        .spacer { flex: 1; }
+        .prev-lbl { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); padding: 12px 18px 6px; }
+        .grid-wrap { padding: 0 18px 18px; }
+        #miniGrid { height: 300px; width: 100%; }
+
+        #toast {
+            position: fixed; bottom: 24px; right: 24px; z-index: 999;
+            background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow);
+            padding: 11px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--text);
+            transform: translateY(70px); opacity: 0; transition: all 0.22s ease;
+            pointer-events: none; max-width: 300px;
+        }
+        #toast.show { transform: translateY(0); opacity: 1; }
+        #toast.success { border-left: 3px solid var(--green); }
+        #toast.error { border-left: 3px solid var(--red); }
     </style>
 </head>
 <body>
-    <div class="container" id="mainContainer">
-        
-        <div id="setupSection">
-            <h1>Fraud Assessment Setup</h1>
-            <form id="uploadForm" enctype="multipart/form-data">
-                <div class="form-group">
-                    <label for="Model"><strong>1. Select Model Pipeline</strong></label>
-                    <select name="Model" id="Model" required>
-                        <option value="">Select a model...</option>
-                        <option value="Apex 1.0">Apex 1.0 (Oracle / Ensembled)</option>
-                        <option value="Core XGB">Core XGBoost</option>
-                        <option value="Core LGB">Core LightGBM</option>
-                        <option value="Core RF">Core Random Forest</option>
-                    </select>
-                </div>
 
-                <div id="thresholdDiv" style="display: none;" class="threshold-input">
-                    <label for="threshold"><strong>Fraud Confirmation Threshold (%)</strong></label>
-                    <input type="number" id="threshold" name="threshold" step="1" min="0" max="100" value="50">
-                </div>
+<nav>
+    <div class="nav-left">
+        <div class="nav-logo">
+            <div class="nav-logo-box">FS</div>
+            FraudSense
+        </div>
+        <div class="nav-sep"></div>
+        <div class="nav-page">Assessment Platform</div>
+    </div>
+    <div><span class="nav-badge">Models v4</span></div>
+</nav>
 
-                <div id="prControls" style="display: none;" class="threshold-input">
-                    <label for="pr_mode"><strong>Target Metric Constraint:</strong></label>
-                    <select name="pr_mode" id="pr_mode">
-                        <option value="threshold">Manual Threshold</option>
-                        <option value="precision">Target Precision</option>
-                        <option value="recall">Target Recall</option>
-                    </select>
-                    <label style="display:block; margin-top:15px;"><strong>Value: </strong><span id="sliderValueDisplay">50</span>%</label>
-                    <input type="range" id="pr_value" name="pr_value" min="0" max="100" step="1" value="50" style="width: 100%;">
-                    <div class="metrics-box">
-                        <p>Threshold Applied : <strong id="display_t">0.5000</strong></p>
-                        <p>Estimated Precision : <strong id="display_p">--</strong> %</p>
-                        <p>Estimated Recall    : <strong id="display_r">--</strong> %</p>
+<div class="main" id="mainWrap">
+
+    <!-- Setup -->
+    <div id="setupSection">
+        <div class="page-hd">
+            <h1>New Assessment</h1>
+            <p>Configure your model pipeline and upload a transaction dataset to begin detection.</p>
+        </div>
+        <div class="card">
+            <div class="card-hdr">
+                <div>
+                    <div class="card-hdr-title">Assessment Configuration</div>
+                    <div class="card-hdr-sub">Select a model and decision parameters, then upload your CSV</div>
+                </div>
+            </div>
+            <div class="card-body">
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <input type="hidden" name="Model" id="modelInput" value="Apex 1.0">
+
+                    <div class="form-grp">
+                        <div class="step-lbl"><span class="step-n">1</span> Model Pipeline</div>
+                        <div class="model-grid">
+                            <div class="model-opt selected" data-model="Apex 1.0">
+                                <div class="model-opt-name">Apex 1.0</div>
+                                <div class="model-opt-desc">Ensemble oracle — combines RF, XGBoost and LightGBM with confidence weighting</div>
+                                <span class="model-opt-tag">RECOMMENDED</span>
+                            </div>
+                            <div class="model-opt" data-model="Core XGB">
+                                <div class="model-opt-name">Core XGBoost</div>
+                                <div class="model-opt-desc">Gradient boosted trees — high precision, full PR-curve threshold control</div>
+                                <span class="model-opt-tag">PR CONTROL</span>
+                            </div>
+                            <div class="model-opt" data-model="Core LGB">
+                                <div class="model-opt-name">Core LightGBM</div>
+                                <div class="model-opt-desc">Leaf-wise growth — fast inference, full PR-curve threshold control</div>
+                                <span class="model-opt-tag">PR CONTROL</span>
+                            </div>
+                            <div class="model-opt" data-model="Core RF">
+                                <div class="model-opt-name">Core Random Forest</div>
+                                <div class="model-opt-desc">Decision tree ensemble — stable baseline, full PR-curve threshold control</div>
+                                <span class="model-opt-tag">PR CONTROL</span>
+                            </div>
+                        </div>
+
+                        <!-- Apex -->
+                        <div class="ctrl-box vis" id="apexCtrl">
+                            <div class="ctrl-lbl">Confidence Threshold</div>
+                            <div class="slider-row">
+                                <input type="range" id="threshold" name="threshold" min="0" max="100" step="1" value="50">
+                                <div class="slider-disp"><span id="threshVal">50</span>%</div>
+                            </div>
+                            <div class="slider-hint">Transactions scoring ≥ <strong id="threshHint">50%</strong> will be flagged as fraudulent</div>
+                        </div>
+
+                        <!-- Core PR -->
+                        <div class="ctrl-box" id="prCtrl">
+                            <div class="ctrl-lbl">Precision–Recall Constraint</div>
+                            <select name="pr_mode" id="pr_mode" style="margin-bottom:12px;">
+                                <option value="threshold">Manual Threshold</option>
+                                <option value="precision">Target Precision</option>
+                                <option value="recall">Target Recall</option>
+                            </select>
+                            <div class="slider-row">
+                                <input type="range" id="pr_value" name="pr_value" min="0" max="100" step="1" value="50">
+                                <div class="slider-disp"><span id="prDisp">50</span>%</div>
+                            </div>
+                            <div class="metrics-row">
+                                <div class="metric-c"><label>Threshold</label><span id="display_t">0.5000</span></div>
+                                <div class="metric-c"><label>Est. Precision</label><span id="display_p">—</span></div>
+                                <div class="metric-c"><label>Est. Recall</label><span id="display_r">—</span></div>
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                <div class="form-group" style="margin-top: 20px;">
-                    <label for="fileToUpload"><strong>2. Upload Dataset (CSV)</strong></label>
-                    <input type="file" id="fileToUpload" name="fileToUpload" accept=".csv" required>
-                </div>
-                <button type="submit" id="submitBtn">Process Dataset</button>
-            </form>
+                    <div class="form-grp">
+                        <div class="step-lbl"><span class="step-n">2</span> Upload Dataset</div>
+                        <div class="file-zone" id="fileZone">
+                            <input type="file" id="fileToUpload" name="fileToUpload" accept=".csv" required>
+                            <div class="file-zone-icon">📄</div>
+                            <div class="file-zone-txt">Drop your <strong>.csv</strong> file here, or click to browse</div>
+                            <div class="file-picked" id="filePicked"></div>
+                        </div>
+                    </div>
 
-            <div id="status">
-                <h3 style="margin-top: 0;">Execution Progress:</h3>
-                <div id="step1" class="step">⏳ Uploading file...</div>
-                <div id="step2" class="step">⏳ Normalizing & Cleaning...</div>
-                <div id="step3" class="step">⏳ Generating Predictions...</div>
-                <div id="step4" class="step">⏳ Finalizing Output...</div>
+                    <button type="submit" class="btn-primary" id="submitBtn">Run Assessment</button>
+                </form>
+
+                <div class="prog-box" id="progBox">
+                    <div class="prog-title">Processing pipeline</div>
+                    <div class="p-step" id="ps1"><div class="p-dot"></div>Receiving and validating dataset</div>
+                    <div class="p-step" id="ps2"><div class="p-dot"></div>Normalizing features and engineering signals</div>
+                    <div class="p-step" id="ps3"><div class="p-dot"></div>Running inference pipeline</div>
+                    <div class="p-step" id="ps4"><div class="p-dot"></div>Serializing output to secure session</div>
+                    <div id="errMsg"></div>
+                </div>
             </div>
         </div>
-
-        <div id="miniWorkspace">
-            <h2>✅ Analysis Complete!</h2>
-
-            <div class="action-buttons">
-                <button id="downloadBtn">📥 Quick Download CSV</button>
-                <button id="expandBtn" class="btn-expand">↗️ Full Data Wrangler</button>
-                <button id="statsBtn" class="btn-stats" onclick="window.location.href='/stats'">📊 View 3D Analytics</button>
-            </div>
-            
-            <p style="font-size: 13px; color: #666; margin-bottom: 5px;">Data Preview (First 10 rows):</p>
-            <div id="miniGrid" class="ag-theme-alpine" style="height: 350px; width: 100%; border: 1px solid #ccc; border-radius: 4px;"></div>
-            
-            <button class="btn-danger" onclick="cancelAndRestart()" id="cancelBtn">🗑️ Clear Data & Start Over</button>
-        </div>
-
     </div>
 
-    <script>
-        const modelSelect = document.getElementById('Model');
-        const thresholdDiv = document.getElementById('thresholdDiv');
-        const prControls = document.getElementById('prControls');
-        const prMode = document.getElementById('pr_mode');
-        const prValueSlider = document.getElementById('pr_value');
-        const form = document.getElementById('uploadForm');
-        const statusDiv = document.getElementById('status');
-        const submitBtn = document.getElementById('submitBtn');
-        const setupSection = document.getElementById('setupSection');
-        const miniWorkspace = document.getElementById('miniWorkspace');
-        const mainContainer = document.getElementById('mainContainer');
-        const cancelBtn = document.getElementById('cancelBtn');
+    <!-- Workspace -->
+    <div id="workspaceSection">
+        <div class="page-hd">
+            <h1>Assessment Results</h1>
+            <p>Fraud predictions are ready. Preview below or open the full data wrangler.</p>
+        </div>
+        <div class="card">
+            <div class="action-bar">
+                <button class="btn-act primary" onclick="window.location.href='/results'">Open Data Wrangler</button>
+                <button class="btn-act" onclick="window.location.href='/stats'">Analytics Dashboard</button>
+                <button class="btn-act" onclick="window.location.href='/download_csv'">Export CSV</button>
+                <div class="spacer"></div>
+                <button class="btn-act danger" onclick="clearSession()">Clear Session</button>
+            </div>
+            <div class="prev-lbl">Data Preview — first 10 rows</div>
+            <div class="grid-wrap">
+                <div id="miniGrid" class="ag-theme-alpine"></div>
+            </div>
+        </div>
+    </div>
+</div>
 
-        const stepElements = {
-            1: document.getElementById('step1'), 2: document.getElementById('step2'),
-            3: document.getElementById('step3'), 4: document.getElementById('step4')
-        };
-        const apiModelMap = { 'Core XGB': 'xgb', 'Core LGB': 'lgb', 'Core RF': 'rf' };
+<div id="toast"></div>
 
-        // Handle Active Session on Page Load
-        let activeFileId = "{{ active_file_id or '' }}";
-        
-        document.addEventListener('DOMContentLoaded', () => {
-            if (activeFileId && activeFileId !== 'None') {
-                showWorkspace();
-                loadGridFromSession();
-            }
-        });
+<script>
+    const apiModelMap = { 'Core XGB': 'xgb', 'Core LGB': 'lgb', 'Core RF': 'rf' };
+    let selectedModel = 'Apex 1.0';
 
-        modelSelect.addEventListener('change', () => {
-            const val = modelSelect.value;
-            if (val === 'Apex 1.0') { thresholdDiv.style.display = 'block'; prControls.style.display = 'none'; } 
-            else if (apiModelMap[val]) { thresholdDiv.style.display = 'none'; prControls.style.display = 'block'; fetchPRInfo(); } 
-            else { thresholdDiv.style.display = 'none'; prControls.style.display = 'none'; }
-        });
-
-        prMode.addEventListener('change', fetchPRInfo);
-        prValueSlider.addEventListener('input', () => { document.getElementById('sliderValueDisplay').textContent = prValueSlider.value; fetchPRInfo(); });
-
-        async function fetchPRInfo() {
-            const modelName = modelSelect.value;
-            if (!apiModelMap[modelName]) return;
-            try {
-                const response = await fetch(`/pr_info?model=${apiModelMap[modelName]}&mode=${prMode.value}&value=${prValueSlider.value}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    document.getElementById('display_t').textContent = data.threshold.toFixed(4);
-                    document.getElementById('display_p').textContent = data.precision.toFixed(2);
-                    document.getElementById('display_r').textContent = data.recall.toFixed(2);
-                }
-            } catch (error) { console.error("PR fetch failed"); }
-        }
-
-        function updateStep(step, status) {
-            const el = stepElements[step];
-            if (status === 'active') { el.innerHTML = '▶ ' + el.textContent.slice(2); el.className = 'step active'; } 
-            else if (status === 'done') { el.innerHTML = '✓ ' + el.textContent.slice(2); el.className = 'step done'; } 
-            else if (status === 'error') { el.innerHTML = '✗ ' + el.textContent.slice(2); el.className = 'step error'; }
-        }
-
-        function showWorkspace() {
-            setupSection.style.display = 'none';
-            mainContainer.style.maxWidth = "800px";
-            miniWorkspace.style.display = 'block';
-        }
-
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(form);
-            submitBtn.disabled = true;
-            statusDiv.style.display = 'block';
-
-            [1, 2, 3, 4].forEach(i => { stepElements[i].innerHTML = '⏳ ' + stepElements[i].textContent.slice(2); stepElements[i].className = 'step'; });
-
-            try {
-                updateStep(1, 'active'); await new Promise(r => setTimeout(r, 200)); updateStep(1, 'done');
-                updateStep(2, 'active'); await new Promise(r => setTimeout(r, 300)); updateStep(2, 'done');
-                updateStep(3, 'active');
-                
-                const response = await fetch('/predict', { method: 'POST', body: formData });
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.error || 'Prediction failed');
-
-                updateStep(3, 'done');
-                updateStep(4, 'active'); await new Promise(r => setTimeout(r, 200)); updateStep(4, 'done');
-
-                showWorkspace();
-                initMiniGrid(result.columns, result.columns); // We don't need to pass fileId to grid anymore, backend tracks it
-
-            } catch (error) {
-                updateStep(3, 'error');
-                statusDiv.innerHTML += `<p class="error" style="margin-top:10px;">Error: ${error.message}</p>`;
-                submitBtn.disabled = false;
-            }
-        });
-
-        // Cancel and Wipe Data
-        async function cancelAndRestart() {
-            cancelBtn.disabled = true;
-            cancelBtn.textContent = '🗑️ Deleting data...';
-            try {
-                await fetch('/cancel_session', { method: 'POST' });
-                window.location.reload();
-            } catch (err) {
-                console.error(err);
-                window.location.reload(); // Reload anyway to clear UI state
-            }
-        }
-
-        // Setup Buttons
-        document.getElementById('downloadBtn').addEventListener('click', () => {
-            window.location.href = `/download_csv`;
-        });
-        document.getElementById('expandBtn').addEventListener('click', () => {
-            window.location.href = `/results`;
-        });
-
-        // Fetch Grid Data for Active Session reload
-        async function loadGridFromSession() {
-            try {
-                const response = await fetch(`/get_page?page=1&size=10`);
-                const data = await response.json();
-                if (response.ok && data.length > 0) {
-                    const columns = Object.keys(data[0]);
-                    initMiniGrid(columns, data);
-                }
-            } catch (err) { console.error(err); }
-        }
-
-        // Initialize AG Grid
-        function initMiniGrid(columns, preloadedData = null) {
-            const columnDefs = columns.map(col => {
-                if (col === 'fraud_prediction' || col === 'fraud_probability') {
-                    return { field: col, pinned: 'left', width: 150 };
-                }
-                return { field: col };
-            });
-
-            const gridOptions = {
-                columnDefs: columnDefs,
-                rowData: [],
-                defaultColDef: { resizable: true, sortable: false, filter: false },
-            };
-
-            const eGridDiv = document.querySelector('#miniGrid');
-            eGridDiv.innerHTML = ''; // Clear prior grid if any
-            const gridApi = agGrid.createGrid(eGridDiv, gridOptions);
-            
-            if (preloadedData && preloadedData !== columns) {
-                 if (gridApi.setGridOption) { gridApi.setGridOption('rowData', preloadedData); } 
-                 else { gridApi.setRowData(preloadedData); }
+    document.querySelectorAll('.model-opt').forEach(card => {
+        card.addEventListener('click', () => {
+            document.querySelectorAll('.model-opt').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            selectedModel = card.dataset.model;
+            document.getElementById('modelInput').value = selectedModel;
+            if (selectedModel === 'Apex 1.0') {
+                document.getElementById('apexCtrl').classList.add('vis');
+                document.getElementById('prCtrl').classList.remove('vis');
             } else {
-                fetchGridData(gridApi);
+                document.getElementById('apexCtrl').classList.remove('vis');
+                document.getElementById('prCtrl').classList.add('vis');
+                fetchPR();
             }
-        }
+        });
+    });
 
-        async function fetchGridData(gridApi) {
-            gridApi.showLoadingOverlay();
-            try {
-                const response = await fetch(`/get_page?page=1&size=10`);
-                const data = await response.json();
-                if (response.ok) {
-                    if (gridApi.setGridOption) { gridApi.setGridOption('rowData', data); } 
-                    else { gridApi.setRowData(data); }
-                }
-            } catch (err) { console.error(err); }
-            gridApi.hideOverlay();
+    const tSlider = document.getElementById('threshold');
+    tSlider.addEventListener('input', () => {
+        document.getElementById('threshVal').textContent = tSlider.value;
+        document.getElementById('threshHint').textContent = tSlider.value + '%';
+    });
+
+    const prSlider = document.getElementById('pr_value');
+    prSlider.addEventListener('input', () => { document.getElementById('prDisp').textContent = prSlider.value; fetchPR(); });
+    document.getElementById('pr_mode').addEventListener('change', fetchPR);
+
+    async function fetchPR() {
+        if (!apiModelMap[selectedModel]) return;
+        try {
+            const r = await fetch(`/pr_info?model=${apiModelMap[selectedModel]}&mode=${document.getElementById('pr_mode').value}&value=${prSlider.value}`);
+            if (r.ok) {
+                const d = await r.json();
+                document.getElementById('display_t').textContent = d.threshold.toFixed(4);
+                document.getElementById('display_p').textContent = d.precision.toFixed(2) + '%';
+                document.getElementById('display_r').textContent = d.recall.toFixed(2) + '%';
+            }
+        } catch(e) {}
+    }
+
+    const fileZone = document.getElementById('fileZone');
+    const fileInput = document.getElementById('fileToUpload');
+    fileZone.addEventListener('dragover', e => { e.preventDefault(); fileZone.classList.add('drag'); });
+    fileZone.addEventListener('dragleave', () => fileZone.classList.remove('drag'));
+    fileZone.addEventListener('drop', e => {
+        e.preventDefault(); fileZone.classList.remove('drag');
+        if (e.dataTransfer.files[0]) { fileInput.files = e.dataTransfer.files; setFile(e.dataTransfer.files[0].name); }
+    });
+    fileInput.addEventListener('change', () => { if (fileInput.files[0]) setFile(fileInput.files[0].name); });
+    function setFile(n) { document.getElementById('filePicked').textContent = '✓ ' + n; }
+
+    function setStep(id, state) { const el = document.getElementById(id); el.className = 'p-step ' + state; }
+
+    function showToast(msg, type) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = 'show ' + (type || '');
+        clearTimeout(t._t);
+        t._t = setTimeout(() => { t.className = ''; }, 3500);
+    }
+
+    document.getElementById('uploadForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true; btn.textContent = 'Processing…';
+        document.getElementById('progBox').classList.add('vis');
+        document.getElementById('errMsg').innerHTML = '';
+        ['ps1','ps2','ps3','ps4'].forEach(id => setStep(id, ''));
+        try {
+            setStep('ps1','active'); await dl(200); setStep('ps1','done');
+            setStep('ps2','active'); await dl(250); setStep('ps2','done');
+            setStep('ps3','active');
+            const res = await fetch('/predict', { method: 'POST', body: new FormData(document.getElementById('uploadForm')) });
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.error || 'Server error');
+            setStep('ps3','done'); setStep('ps4','active'); await dl(200); setStep('ps4','done');
+            showToast('Assessment complete — results ready.', 'success');
+            showWorkspace(result.columns);
+        } catch(err) {
+            setStep('ps3','error');
+            document.getElementById('errMsg').innerHTML = `<div class="err-banner">${err.message}</div>`;
+            btn.disabled = false; btn.textContent = 'Run Assessment';
+            showToast(err.message, 'error');
         }
-    </script>
+    });
+
+    function dl(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    function showWorkspace(columns) {
+        document.getElementById('setupSection').style.display = 'none';
+        document.getElementById('workspaceSection').style.display = 'block';
+        document.getElementById('mainWrap').classList.add('wide');
+        if (columns) initGrid(columns, null);
+        else fetch('/get_page?page=1&size=10').then(r => r.json()).then(d => { if (d.length) initGrid(Object.keys(d[0]), d); });
+    }
+
+    function initGrid(columns, data) {
+        const defs = columns.map(col => {
+            const d = { field: col, resizable: true };
+            if (col === 'fraud_prediction') {
+                d.pinned = 'left'; d.width = 148;
+                d.cellStyle = p => p.value === 1 ? { color: '#c92a2a', fontWeight: '600' } : { color: '#2b7d3b', fontWeight: '600' };
+            } else if (col === 'fraud_probability') {
+                d.pinned = 'left'; d.width = 160;
+                d.valueFormatter = p => p.value != null ? p.value.toFixed(2) + '%' : '';
+                d.cellStyle = p => {
+                    if (p.value >= 80) return { color: '#c92a2a', fontWeight: '600' };
+                    if (p.value >= 50) return { color: '#d97706', fontWeight: '600' };
+                    return { color: '#495057' };
+                };
+            }
+            return d;
+        });
+        const el = document.getElementById('miniGrid');
+        el.innerHTML = '';
+        const api = agGrid.createGrid(el, { columnDefs: defs, rowData: [], defaultColDef: { resizable: true } });
+        const setRows = rows => { if (api.setGridOption) api.setGridOption('rowData', rows); else api.setRowData(rows); };
+        if (data) setRows(data);
+        else fetch('/get_page?page=1&size=10').then(r => r.json()).then(setRows);
+    }
+
+    async function clearSession() {
+        try { await fetch('/cancel_session', { method: 'POST' }); } catch(e) {}
+        window.location.reload();
+    }
+
+    const activeFileId = "{{ active_file_id or '' }}";
+    if (activeFileId && activeFileId !== 'None') {
+        showWorkspace(null);
+    }
+</script>
 </body>
 </html>

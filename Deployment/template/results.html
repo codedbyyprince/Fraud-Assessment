@@ -3,174 +3,186 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fraud Analysis Results</title>
+    <title>FraudSense — Data Wrangler</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #1e1e1e; color: #fff;}
-        .container { max-width: 95%; margin: 0 auto; background: #252526; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px;}
-        h1 { margin: 0; font-size: 22px; color: #d4d4d4; font-weight: 500;}
-        
-        button { padding: 8px 16px; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; font-weight: bold;}
-        .btn-download { background-color: #0e639c; color: white; }
-        .btn-download:hover { background-color: #1177bb; }
-        .btn-back { background-color: #555; color: white; margin-right: 10px;}
-        .btn-back:hover { background-color: #666; }
-        .btn-danger { background-color: #a4262c; color: white; margin-left: 10px; }
-        .btn-danger:hover { background-color: #8c1d22; }
-
-        #myGrid { height: 65vh; width: 100%; border: 1px solid #333; }
-        
-        .pagination-bar { display: flex; justify-content: space-between; align-items: center; background: #333333; padding: 10px; border: 1px solid #444; border-top: none; font-size: 13px; color: #ccc;}
-        .page-actions button { background-color: #444; color: #fff; border: 1px solid #555; padding: 4px 12px; margin: 0 5px;}
-        .page-actions button:hover:not(:disabled) { background-color: #555; }
-        .page-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
-        select { background: #444; color: #fff; border: 1px solid #555; padding: 2px 5px;}
-
-        .btn-stats {
-            background: linear-gradient(145deg, #1e3c72, #2a5298);
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 4px 0 #11264c, 0 5px 10px rgba(0,0,0,0.3);
-            transition: all 0.1s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin-right: 10px;
+        :root {
+            --bg: #f0f2f5;
+            --surface: #ffffff;
+            --surface2: #f8f9fa;
+            --border: #dee2e6;
+            --blue: #3b5bdb;
+            --blue-hover: #2f4bc7;
+            --blue-light: #eef1fd;
+            --red: #c92a2a;
+            --red-light: #fff5f5;
+            --green: #2b7d3b;
+            --amber: #d97706;
+            --text: #1a1d23;
+            --text-sec: #495057;
+            --text-muted: #868e96;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.07);
+            --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
-        .btn-stats:active {
-            box-shadow: 0 0 0 #11264c, 0 2px 5px rgba(0,0,0,0.3);
-            transform: translateY(4px);
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: var(--font); background: var(--bg); color: var(--text);
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden; font-size: 14px;
         }
+
+        /* Top bar */
+        .topbar {
+            background: var(--surface); border-bottom: 1px solid var(--border);
+            height: 52px; display: flex; align-items: center; justify-content: space-between;
+            padding: 0 20px; flex-shrink: 0; box-shadow: var(--shadow-sm);
+        }
+        .tl { display: flex; align-items: center; gap: 12px; }
+        .t-logo { font-weight: 700; font-size: 14px; color: var(--blue); display: flex; align-items: center; gap: 7px; }
+        .t-logo-box { width: 26px; height: 26px; background: var(--blue); border-radius: 5px; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: 700; }
+        .t-sep { width: 1px; height: 18px; background: var(--border); }
+        .t-page { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+        .tr { display: flex; align-items: center; gap: 6px; }
+
+        .btn {
+            padding: 6px 13px; border: 1.5px solid var(--border); border-radius: 6px;
+            background: var(--surface); color: var(--text-sec); font-family: var(--font);
+            font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.12s;
+        }
+        .btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+        .btn.primary { background: var(--blue); color: white; border-color: var(--blue); }
+        .btn.primary:hover { background: var(--blue-hover); }
+        .btn.danger { color: var(--red); border-color: rgba(201,42,42,0.3); }
+        .btn.danger:hover { background: var(--red-light); border-color: var(--red); }
+
+        /* Status strip */
+        .statusbar {
+            background: var(--surface2); border-bottom: 1px solid var(--border);
+            height: 30px; display: flex; align-items: center; padding: 0 20px; gap: 20px; flex-shrink: 0;
+        }
+        .stat { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 5px; }
+        .stat strong { color: var(--text-sec); }
+        .stat-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
+
+        /* Grid */
+        .grid-area { flex: 1; min-height: 0; }
+        #myGrid { height: 100%; width: 100%; }
+
+        /* Pagination */
+        .pager {
+            background: var(--surface); border-top: 1px solid var(--border);
+            height: 40px; display: flex; align-items: center; justify-content: space-between;
+            padding: 0 20px; flex-shrink: 0;
+        }
+        .pager-info { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 10px; }
+        .pager-info select { padding: 3px 24px 3px 8px; border: 1px solid var(--border); border-radius: 4px; font-family: var(--font); font-size: 12px; background: var(--surface); color: var(--text); appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23868e96' stroke-width='1.3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 6px center; }
+        .pager-nav { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); }
+        .pager-btn { padding: 4px 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text-sec); font-family: var(--font); font-size: 12px; cursor: pointer; transition: all 0.12s; }
+        .pager-btn:hover:not(:disabled) { border-color: var(--blue); color: var(--blue); }
+        .pager-btn:disabled { opacity: 0.35; cursor: not-allowed; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <div class="header-bar">
-            <h1>Data Wrangler (Full View)</h1>
-            <div>
-                <button class="btn-stats" onclick="window.location.href='/stats'">📊 View Analytics</button>
-                <button class="btn-back" onclick="window.location.href='/'">🔙 Home</button>
-                <button class="btn-download" onclick="window.location.href='/download_csv'">📥 Download CSV</button>
-                <button class="btn-danger" onclick="cancelAndRestart()" id="cancelBtn">🗑️ Clear Data</button>
-            </div>
-        </div>
-        
-        <div id="myGrid" class="ag-theme-alpine-dark"></div>
-        
-        <div class="pagination-bar">
-            <div>
-                <span>{{ "{:,}".format(total_rows) }} total rows</span> | 
-                Rows per page: 
-                <select id="pageSize">
-                    <option value="15" selected>15</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                    <option value="500">500</option>
-                </select>
-            </div>
-            <div class="page-actions">
-                <button id="prevPage">« Prev</button>
-                <span>Page <span id="currentPage">1</span> of <span id="totalPages">1</span></span>
-                <button id="nextPage">Next »</button>
-            </div>
-        </div>
+<div class="topbar">
+    <div class="tl">
+        <div class="t-logo"><div class="t-logo-box">FS</div>FraudSense</div>
+        <div class="t-sep"></div>
+        <div class="t-page">Data Wrangler</div>
     </div>
+    <div class="tr">
+        <button class="btn" onclick="window.location.href='/stats'">Analytics Dashboard</button>
+        <button class="btn primary" onclick="window.location.href='/download_csv'">Export CSV</button>
+        <button class="btn" onclick="window.location.href='/'">← Home</button>
+        <button class="btn danger" onclick="clearSession()">Clear Session</button>
+    </div>
+</div>
 
-    <script>
-        const totalRows = parseInt("{{ total_rows }}");
-        const columns = {{ columns | tojson | safe }}; 
-        
-        let currentPage = 1;
-        let pageSize = 15;
-        let gridApi;
+<div class="statusbar">
+    <div class="stat"><div class="stat-dot"></div>Session Active</div>
+    <div class="stat"><strong>{{ "{:,}".format(total_rows) }}</strong> rows analyzed</div>
+    <div class="stat"><strong>{{ columns | length }}</strong> columns</div>
+</div>
 
-        const columnDefs = columns.map(col => {
-            if (col === 'fraud_prediction' || col === 'fraud_probability') {
-                return { field: col, pinned: 'left', sortable: true, filter: true, width: 160 };
-            }
-            return { field: col, sortable: true, filter: true };
-        });
+<div class="grid-area">
+    <div id="myGrid" class="ag-theme-alpine"></div>
+</div>
 
-        const gridOptions = {
-            columnDefs: columnDefs,
-            rowData: [],
-            defaultColDef: { resizable: true },
-            rowSelection: 'single',
-            animateRows: true,
-        };
+<div class="pager">
+    <div class="pager-info">
+        Rows per page:
+        <select id="pageSize">
+            <option value="15" selected>15</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="500">500</option>
+        </select>
+    </div>
+    <div class="pager-nav">
+        <button class="pager-btn" id="prevPage">← Prev</button>
+        <span>Page <strong id="currentPage">1</strong> of <span id="totalPages">1</span></span>
+        <button class="pager-btn" id="nextPage">Next →</button>
+    </div>
+</div>
 
-        const eGridDiv = document.querySelector('#myGrid');
-        gridApi = agGrid.createGrid(eGridDiv, gridOptions);
+<script>
+    const totalRows = {{ total_rows }};
+    const columns = {{ columns | tojson | safe }};
+    let currentPage = 1, pageSize = 15;
 
-        async function loadPageData() {
-            gridApi.showLoadingOverlay();
-            try {
-                const response = await fetch(`/get_page?page=${currentPage}&size=${pageSize}`);
-                const data = await response.json();
-                if (response.ok) {
-                    if (gridApi.setGridOption) {
-                        gridApi.setGridOption('rowData', data);
-                    } else {
-                        gridApi.setRowData(data);
-                    }
-                } else {
-                    console.error("Fetch error:", data.error);
-                }
-            } catch (err) {
-                console.error(err);
-            }
-            gridApi.hideOverlay();
-            updatePaginationUI();
+    const colDefs = columns.map(col => {
+        const d = { field: col, sortable: true, filter: true, resizable: true };
+        if (col === 'fraud_prediction') {
+            d.pinned = 'left'; d.width = 148;
+            d.cellStyle = p => p.value === 1 ? { color: '#c92a2a', fontWeight: '600' } : { color: '#2b7d3b', fontWeight: '600' };
+        } else if (col === 'fraud_probability') {
+            d.pinned = 'left'; d.width = 160;
+            d.valueFormatter = p => p.value != null ? p.value.toFixed(2) + '%' : '';
+            d.cellStyle = p => {
+                if (p.value >= 80) return { color: '#c92a2a', fontWeight: '600' };
+                if (p.value >= 50) return { color: '#d97706', fontWeight: '600' };
+                return {};
+            };
         }
+        return d;
+    });
 
-        const prevPageBtn = document.getElementById('prevPage');
-        const nextPageBtn = document.getElementById('nextPage');
-        const currentPageEl = document.getElementById('currentPage');
-        const totalPagesEl = document.getElementById('totalPages');
+    const gridEl = document.getElementById('myGrid');
+    let gridApi = agGrid.createGrid(gridEl, {
+        columnDefs: colDefs, rowData: [],
+        defaultColDef: { resizable: true }, animateRows: true,
+    });
 
-        function updatePaginationUI() {
-            const totalPages = Math.ceil(totalRows / pageSize) || 1;
-            currentPageEl.textContent = currentPage;
-            totalPagesEl.textContent = totalPages;
-            prevPageBtn.disabled = currentPage === 1;
-            nextPageBtn.disabled = currentPage === totalPages;
-        }
+    async function loadPage() {
+        gridApi.showLoadingOverlay();
+        try {
+            const r = await fetch(`/get_page?page=${currentPage}&size=${pageSize}`);
+            const data = await r.json();
+            if (r.ok) { if (gridApi.setGridOption) gridApi.setGridOption('rowData', data); else gridApi.setRowData(data); }
+        } catch(e) {}
+        gridApi.hideOverlay();
+        updatePager();
+    }
 
-        document.getElementById('pageSize').addEventListener('change', (e) => {
-            pageSize = parseInt(e.target.value);
-            currentPage = 1;
-            loadPageData();
-        });
+    function updatePager() {
+        const total = Math.ceil(totalRows / pageSize) || 1;
+        document.getElementById('currentPage').textContent = currentPage;
+        document.getElementById('totalPages').textContent = total;
+        document.getElementById('prevPage').disabled = currentPage === 1;
+        document.getElementById('nextPage').disabled = currentPage >= total;
+    }
 
-        prevPageBtn.addEventListener('click', () => {
-            if (currentPage > 1) { currentPage--; loadPageData(); }
-        });
+    document.getElementById('pageSize').addEventListener('change', e => { pageSize = parseInt(e.target.value); currentPage = 1; loadPage(); });
+    document.getElementById('prevPage').addEventListener('click', () => { if (currentPage > 1) { currentPage--; loadPage(); } });
+    document.getElementById('nextPage').addEventListener('click', () => { if (currentPage < Math.ceil(totalRows / pageSize)) { currentPage++; loadPage(); } });
 
-        nextPageBtn.addEventListener('click', () => {
-            const totalPages = Math.ceil(totalRows / pageSize);
-            if (currentPage < totalPages) { currentPage++; loadPageData(); }
-        });
+    async function clearSession() {
+        try { await fetch('/cancel_session', { method: 'POST' }); } catch(e) {}
+        window.location.href = '/';
+    }
 
-        async function cancelAndRestart() {
-            const btn = document.getElementById('cancelBtn');
-            btn.disabled = true;
-            btn.textContent = '🗑️ Deleting...';
-            try {
-                await fetch('/cancel_session', { method: 'POST' });
-                window.location.href = '/';
-            } catch (err) {
-                console.error(err);
-                window.location.href = '/';
-            }
-        }
-
-        loadPageData();
-    </script>
+    loadPage();
+</script>
 </body>
 </html>
