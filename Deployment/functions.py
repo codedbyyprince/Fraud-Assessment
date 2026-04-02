@@ -1,6 +1,9 @@
 import pandas as pd
 import numpy as np
 import joblib
+from huggingface_hub import hf_hub_download
+
+REPO_ID = 'mlwithprince/Fruad-Deteaction_models'
 
 def normalize_browser(browser):
     if pd.isna(browser): return "Other"
@@ -73,8 +76,8 @@ def eng_feas(df):
     df[num_cols] = df[num_cols].fillna(0)
     df = df.fillna('nan')
 
-    dtype_path = '/media/prince/5A4E832F4E83034D/Fraud-Detector-ML/Models/v4/train_dtypes.pkl'
     try:
+        dtype_path = hf_hub_download(repo_id=REPO_ID, filename='train_dtypes.pkl')
         train_dtypes = joblib.load(dtype_path)
         for col in df.columns:
             if col in train_dtypes:
