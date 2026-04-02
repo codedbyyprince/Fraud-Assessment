@@ -6,26 +6,28 @@ import os
 import uuid
 import time
 from functions import process_csv
+from huggingface_hub import hf_hub_download
 
 app = Flask(__name__, template_folder='template')
-app.secret_key = os.urandom(24)
 
-BASE_MODEL_PATH = '/media/prince/5A4E832F4E83034D/Fraud-Detector-ML/Models/v4/'
-BASE_FINAL_PATH = '/media/prince/5A4E832F4E83034D/Fraud-Detector-ML/Models/Final/'
+# FIX: Use a static secret key so sessions persist across multiple workers and server reloads!
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'fraud-sense-production-key-12345')
+
+REPO_ID = 'mlwithprince/Fruad-Deteaction_models'
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMP_DIR = os.path.join(BASE_DIR, 'temp_predictions')
 os.makedirs(TEMP_DIR, exist_ok=True)
 
 # Load Models
-rf_model  = joblib.load(BASE_MODEL_PATH + 'model_v4_rf.pkl')
-xgb_model = joblib.load(BASE_MODEL_PATH + 'model_v4_xg.pkl')
-lgb_model = joblib.load(BASE_MODEL_PATH + 'model_v4_lgb.pkl')
+rf_model  = joblib.load(hf_hub_download(repo_id=REPO_ID, filename='mode_rf.pkl'))
+xgb_model = joblib.load(hf_hub_download(repo_id=REPO_ID, filename='model_xg.pkl'))
+lgb_model = joblib.load(hf_hub_download(repo_id=REPO_ID, filename='model_lgb.pkl'))
 
 pr_curves = {
-    'rf'  : joblib.load(BASE_FINAL_PATH + 'pr_curve_rf.pkl'),
-    'xgb' : joblib.load(BASE_FINAL_PATH + 'pr_curve_xgb.pkl'),
-    'lgb' : joblib.load(BASE_FINAL_PATH + 'pr_curve_lgb.pkl'),
+    'rf'  : joblib.load(hf_hub_download(repo_id=REPO_ID, filename='pr_curve_rf.pkl')),
+    'xgb' : joblib.load(hf_hub_download(repo_id=REPO_ID, filename='pr_curve_xgb.pkl')),
+    'lgb' : joblib.load(hf_hub_download(repo_id=REPO_ID, filename='pr_curve_lgb.pkl')),
 }
 
 
@@ -159,9 +161,14 @@ def cancel_session():
     if file_id:
         filepath = os.path.join(TEMP_DIR, f"{file_id}.csv")
         if os.path.exists(filepath):
-            try: os.remove(filepath)
-            except Exception as e: print(f"Error deleting file: {e}")
+            try: 
+                os.remove(filepath)
+                print(f"Successfully deleted {filepath}")
+            except Exception as e: 
+                print(f"Error deleting file: {e}")
         session.pop('file_id', None)
+    else:
+        print("No active file_id found in session to delete.")
     return jsonify({"status": "cleared"})
 
 
