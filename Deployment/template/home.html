@@ -29,25 +29,27 @@
         .action-buttons button { margin-top: 0; }
         .btn-expand { background-color: #107c10; }
         .btn-expand:hover { background-color: #0c5e0c; }
+        .btn-danger { background-color: #a4262c; margin-top: 15px; }
+        .btn-danger:hover { background-color: #8c1d22; }
 
         .btn-stats {
-    background: linear-gradient(145deg, #1e3c72, #2a5298);
-    color: white;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 6px;
-    font-weight: bold;
-    cursor: pointer;
-    box-shadow: 0 4px 0 #11264c, 0 5px 10px rgba(0,0,0,0.3);
-    transition: all 0.1s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
-.btn-stats:active {
-    box-shadow: 0 0 0 #11264c, 0 2px 5px rgba(0,0,0,0.3);
-    transform: translateY(4px);
-}
+            background: linear-gradient(145deg, #1e3c72, #2a5298);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #11264c, 0 5px 10px rgba(0,0,0,0.3);
+            transition: all 0.1s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-stats:active {
+            box-shadow: 0 0 0 #11264c, 0 2px 5px rgba(0,0,0,0.3);
+            transform: translateY(4px);
+        }
     </style>
 </head>
 <body>
@@ -108,19 +110,15 @@
             <h2>✅ Analysis Complete!</h2>
 
             <div class="action-buttons">
-    <button id="downloadBtn">📥 Quick Download</button>
-    <button id="expandBtn" class="btn-expand">↗️ Full Wrangler</button>
-    <button id="statsBtn" class="btn-stats" onclick="window.location.href='/stats?file_id=' + currentFileId">📊 View 3D Analytics</button>
-</div>
-            <div class="action-buttons">
                 <button id="downloadBtn">📥 Quick Download CSV</button>
-                <button id="expandBtn" class="btn-expand">↗️ Open Full Data Wrangler</button>
+                <button id="expandBtn" class="btn-expand">↗️ Full Data Wrangler</button>
+                <button id="statsBtn" class="btn-stats" onclick="window.location.href='/stats'">📊 View 3D Analytics</button>
             </div>
             
             <p style="font-size: 13px; color: #666; margin-bottom: 5px;">Data Preview (First 10 rows):</p>
             <div id="miniGrid" class="ag-theme-alpine" style="height: 350px; width: 100%; border: 1px solid #ccc; border-radius: 4px;"></div>
             
-            <button onclick="location.reload()" style="background-color: #555; margin-top: 15px;">↺ Start New File</button>
+            <button class="btn-danger" onclick="cancelAndRestart()" id="cancelBtn">🗑️ Clear Data & Start Over</button>
         </div>
 
     </div>
@@ -137,6 +135,7 @@
         const setupSection = document.getElementById('setupSection');
         const miniWorkspace = document.getElementById('miniWorkspace');
         const mainContainer = document.getElementById('mainContainer');
+        const cancelBtn = document.getElementById('cancelBtn');
 
         const stepElements = {
             1: document.getElementById('step1'), 2: document.getElementById('step2'),
@@ -144,7 +143,15 @@
         };
         const apiModelMap = { 'Core XGB': 'xgb', 'Core LGB': 'lgb', 'Core RF': 'rf' };
 
-        let currentFileId = null;
+        // Handle Active Session on Page Load
+        let activeFileId = "{{ active_file_id or '' }}";
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            if (activeFileId && activeFileId !== 'None') {
+                showWorkspace();
+                loadGridFromSession();
+            }
+        });
 
         modelSelect.addEventListener('change', () => {
             const val = modelSelect.value;
@@ -177,6 +184,12 @@
             else if (status === 'error') { el.innerHTML = '✗ ' + el.textContent.slice(2); el.className = 'step error'; }
         }
 
+        function showWorkspace() {
+            setupSection.style.display = 'none';
+            mainContainer.style.maxWidth = "800px";
+            miniWorkspace.style.display = 'block';
+        }
+
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = new FormData(form);
@@ -197,15 +210,8 @@
                 updateStep(3, 'done');
                 updateStep(4, 'active'); await new Promise(r => setTimeout(r, 200)); updateStep(4, 'done');
 
-                currentFileId = result.file_id;
-                
-                // Hide Setup, Show Mini Workspace
-                setupSection.style.display = 'none';
-                mainContainer.style.maxWidth = "800px"; // Expand box slightly for table
-                miniWorkspace.style.display = 'block';
-
-                // Setup the Mini Preview Grid
-                initMiniGrid(result.columns, currentFileId);
+                showWorkspace();
+                initMiniGrid(result.columns, result.columns); // We don't need to pass fileId to grid anymore, backend tracks it
 
             } catch (error) {
                 updateStep(3, 'error');
@@ -214,16 +220,41 @@
             }
         });
 
+        // Cancel and Wipe Data
+        async function cancelAndRestart() {
+            cancelBtn.disabled = true;
+            cancelBtn.textContent = '🗑️ Deleting data...';
+            try {
+                await fetch('/cancel_session', { method: 'POST' });
+                window.location.reload();
+            } catch (err) {
+                console.error(err);
+                window.location.reload(); // Reload anyway to clear UI state
+            }
+        }
+
         // Setup Buttons
         document.getElementById('downloadBtn').addEventListener('click', () => {
-            if (currentFileId) window.location.href = `/download_csv?file_id=${currentFileId}`;
+            window.location.href = `/download_csv`;
         });
         document.getElementById('expandBtn').addEventListener('click', () => {
-            if (currentFileId) window.location.href = `/results?file_id=${currentFileId}`;
+            window.location.href = `/results`;
         });
 
+        // Fetch Grid Data for Active Session reload
+        async function loadGridFromSession() {
+            try {
+                const response = await fetch(`/get_page?page=1&size=10`);
+                const data = await response.json();
+                if (response.ok && data.length > 0) {
+                    const columns = Object.keys(data[0]);
+                    initMiniGrid(columns, data);
+                }
+            } catch (err) { console.error(err); }
+        }
+
         // Initialize AG Grid
-        async function initMiniGrid(columns, fileId) {
+        function initMiniGrid(columns, preloadedData = null) {
             const columnDefs = columns.map(col => {
                 if (col === 'fraud_prediction' || col === 'fraud_probability') {
                     return { field: col, pinned: 'left', width: 150 };
@@ -234,16 +265,25 @@
             const gridOptions = {
                 columnDefs: columnDefs,
                 rowData: [],
-                defaultColDef: { resizable: true, sortable: false, filter: false }, // Keep it simple for preview
+                defaultColDef: { resizable: true, sortable: false, filter: false },
             };
 
             const eGridDiv = document.querySelector('#miniGrid');
+            eGridDiv.innerHTML = ''; // Clear prior grid if any
             const gridApi = agGrid.createGrid(eGridDiv, gridOptions);
             
+            if (preloadedData && preloadedData !== columns) {
+                 if (gridApi.setGridOption) { gridApi.setGridOption('rowData', preloadedData); } 
+                 else { gridApi.setRowData(preloadedData); }
+            } else {
+                fetchGridData(gridApi);
+            }
+        }
+
+        async function fetchGridData(gridApi) {
             gridApi.showLoadingOverlay();
             try {
-                // Fetch just 10 rows for preview
-                const response = await fetch(`/get_page?file_id=${fileId}&page=1&size=10`);
+                const response = await fetch(`/get_page?page=1&size=10`);
                 const data = await response.json();
                 if (response.ok) {
                     if (gridApi.setGridOption) { gridApi.setGridOption('rowData', data); } 

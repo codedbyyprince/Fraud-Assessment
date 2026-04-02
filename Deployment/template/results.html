@@ -16,6 +16,8 @@
         .btn-download:hover { background-color: #1177bb; }
         .btn-back { background-color: #555; color: white; margin-right: 10px;}
         .btn-back:hover { background-color: #666; }
+        .btn-danger { background-color: #a4262c; color: white; margin-left: 10px; }
+        .btn-danger:hover { background-color: #8c1d22; }
 
         #myGrid { height: 65vh; width: 100%; border: 1px solid #333; }
         
@@ -38,6 +40,7 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
+            margin-right: 10px;
         }
         .btn-stats:active {
             box-shadow: 0 0 0 #11264c, 0 2px 5px rgba(0,0,0,0.3);
@@ -51,9 +54,10 @@
         <div class="header-bar">
             <h1>Data Wrangler (Full View)</h1>
             <div>
-                <button class="btn-stats" onclick="window.location.href='/stats?file_id={{ file_id }}'" style="margin-right: 10px;">📊 View Analytics</button>
-                <button class="btn-back" onclick="window.location.href='/'">↺ Back to Setup</button>
-                <button class="btn-download" onclick="window.location.href='/download_csv?file_id={{ file_id }}'">📥 Download Full CSV</button>
+                <button class="btn-stats" onclick="window.location.href='/stats'">📊 View Analytics</button>
+                <button class="btn-back" onclick="window.location.href='/'">🔙 Home</button>
+                <button class="btn-download" onclick="window.location.href='/download_csv'">📥 Download CSV</button>
+                <button class="btn-danger" onclick="cancelAndRestart()" id="cancelBtn">🗑️ Clear Data</button>
             </div>
         </div>
         
@@ -79,7 +83,6 @@
     </div>
 
     <script>
-        const fileId = "{{ file_id }}";
         const totalRows = parseInt("{{ total_rows }}");
         const columns = {{ columns | tojson | safe }}; 
         
@@ -108,10 +111,9 @@
         async function loadPageData() {
             gridApi.showLoadingOverlay();
             try {
-                const response = await fetch(`/get_page?file_id=${fileId}&page=${currentPage}&size=${pageSize}`);
+                const response = await fetch(`/get_page?page=${currentPage}&size=${pageSize}`);
                 const data = await response.json();
                 if (response.ok) {
-                    // Safe injection of data regardless of AG Grid internal version updates
                     if (gridApi.setGridOption) {
                         gridApi.setGridOption('rowData', data);
                     } else {
@@ -155,7 +157,19 @@
             if (currentPage < totalPages) { currentPage++; loadPageData(); }
         });
 
-        // Initialize Data
+        async function cancelAndRestart() {
+            const btn = document.getElementById('cancelBtn');
+            btn.disabled = true;
+            btn.textContent = '🗑️ Deleting...';
+            try {
+                await fetch('/cancel_session', { method: 'POST' });
+                window.location.href = '/';
+            } catch (err) {
+                console.error(err);
+                window.location.href = '/';
+            }
+        }
+
         loadPageData();
     </script>
 </body>

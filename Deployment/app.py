@@ -1,13 +1,16 @@
-from flask import Flask, render_template, request, send_file, jsonify
+from flask import Flask, render_template, request, send_file, jsonify, session, redirect, url_for
 import pandas as pd
 import numpy as np
 import joblib
 import io
 import os
 import uuid
+import time
 from functions import process_csv
 
 app = Flask(__name__, template_folder='template')
+# REQUIRED FOR SESSIONS: Set a random secret key
+app.secret_key = os.urandom(24) 
 
 BASE_MODEL_PATH = '/media/prince/5A4E832F4E83034D/Fraud-Detector-ML/Models/v4/'
 BASE_FINAL_PATH = '/media/prince/5A4E832F4E83034D/Fraud-Detector-ML/Models/Final/'
@@ -16,6 +19,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMP_DIR = os.path.join(BASE_DIR, 'temp_predictions')
 os.makedirs(TEMP_DIR, exist_ok=True)
 
+# Load Models
 rf_model  = joblib.load(BASE_MODEL_PATH + 'model_v4_rf.pkl')
 xgb_model = joblib.load(BASE_MODEL_PATH + 'model_v4_xg.pkl')
 lgb_model = joblib.load(BASE_MODEL_PATH + 'model_v4_lgb.pkl')
@@ -26,6 +30,20 @@ pr_curves = {
     'lgb' : joblib.load(BASE_FINAL_PATH + 'pr_curve_lgb.pkl'),
 }
 
+# --- GARBAGE COLLECTION ---
+def cleanup_old_files():
+    """Deletes files older than 12 hours to prevent disk space exhaustion from abandoned sessions."""
+    now = time.time()
+    for filename in os.listdir(TEMP_DIR):
+        filepath = os.path.join(TEMP_DIR, filename)
+        if os.path.isfile(filepath):
+            if os.stat(filepath).st_mtime < now - 43200: # 12 hours in seconds
+                try:
+                    os.remove(filepath)
+                except Exception:
+                    pass
+
+# --- CORE ML FUNCTIONS ---
 def get_threshold_from_pr(model_key, mode, value):
     curve     = pr_curves[model_key]
     precision = np.array(curve['precision'])
@@ -68,9 +86,20 @@ def run_apex(X, threshold):
     final_pred    = (conf_score >= threshold).astype(int)
     return conf_score, final_pred
 
+# --- ROUTES ---
+
 @app.route('/')
 def home():
-    return render_template('home.html')
+    active_file_id = session.get('file_id')
+    
+    # Verify the session file actually exists on disk
+    if active_file_id:
+        filepath = os.path.join(TEMP_DIR, f"{active_file_id}.csv")
+        if not os.path.exists(filepath):
+            session.pop('file_id', None)
+            active_file_id = None
+
+    return render_template('home.html', active_file_id=active_file_id)
 
 @app.route('/pr_info', methods=['GET'])
 def pr_info():
@@ -89,6 +118,8 @@ def pr_info():
 
 @app.route('/predict', methods=['POST'])
 def predict():
+    cleanup_old_files() # Run garbage collection before processing new heavy files
+    
     file = request.files.get('fileToUpload')
     if not file or not file.filename.endswith('.csv'): return jsonify({"error": "Invalid CSV"}), 400
     model_name = request.form.get('Model')
@@ -123,16 +154,35 @@ def predict():
         filepath = os.path.join(TEMP_DIR, f"{file_id}.csv")
         df.to_csv(filepath, index=False)
         
+        # Lock user to this file ID in their session
+        session['file_id'] = file_id
+        
         return jsonify({"status": "success", "file_id": file_id, "columns": df.columns.tolist()})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/cancel_session', methods=['POST'])
+def cancel_session():
+    """Deletes the active file to free up space and resets the user session."""
+    file_id = session.get('file_id')
+    if file_id:
+        filepath = os.path.join(TEMP_DIR, f"{file_id}.csv")
+        if os.path.exists(filepath):
+            try:
+                os.remove(filepath)
+            except Exception as e:
+                print(f"Error deleting file: {e}")
+        session.pop('file_id', None)
+    return jsonify({"status": "cleared"})
+
 @app.route('/results', methods=['GET'])
 def results_page():
-    file_id = request.args.get('file_id')
+    file_id = session.get('file_id')
+    if not file_id: return redirect('/')
+    
     filepath = os.path.join(TEMP_DIR, f"{file_id}.csv")
-    if not file_id or not os.path.exists(filepath): return "File not found.", 404
+    if not os.path.exists(filepath): return redirect('/')
         
     columns = pd.read_csv(filepath, nrows=0).columns.tolist()
     with open(filepath, 'r', encoding='utf-8') as f:
@@ -142,7 +192,9 @@ def results_page():
 
 @app.route('/get_page', methods=['GET'])
 def get_page():
-    file_id = request.args.get('file_id')
+    file_id = session.get('file_id')
+    if not file_id: return jsonify({"error": "No active session"}), 403
+
     page, size = int(request.args.get('page', 1)), int(request.args.get('size', 15))
     filepath = os.path.join(TEMP_DIR, f"{file_id}.csv")
     
@@ -153,7 +205,6 @@ def get_page():
     
     try:
         df_chunk = pd.read_csv(filepath, skiprows=skip_rows, nrows=size, header=None, names=cols)
-        # FIX FOR "NO ROWS TO SHOW": Replace NaN with None so JSON serialization doesn't crash
         df_chunk = df_chunk.replace({np.nan: None})
         return jsonify(df_chunk.to_dict(orient='records'))
     except Exception as e:
@@ -161,46 +212,43 @@ def get_page():
 
 @app.route('/download_csv', methods=['GET'])
 def download_csv():
-    file_id = request.args.get('file_id')
+    file_id = session.get('file_id')
+    if not file_id: return redirect('/')
+    
     filepath = os.path.join(TEMP_DIR, f"{file_id}.csv")
     if os.path.exists(filepath): return send_file(filepath, as_attachment=True, download_name='fraud_predictions.csv')
     return "File not found", 404
 
-# --- NEW ANALYTICS DASHBOARD ROUTES ---
-
 @app.route('/stats', methods=['GET'])
 def stats_page():
-    file_id = request.args.get('file_id')
+    file_id = session.get('file_id')
+    if not file_id: return redirect('/')
+    
     filepath = os.path.join(TEMP_DIR, f"{file_id}.csv")
-    if not file_id or not os.path.exists(filepath):
-        return "File not found.", 404
+    if not os.path.exists(filepath): return redirect('/')
+    
     return render_template('stats.html', file_id=file_id)
 
 @app.route('/api/stats_data', methods=['GET'])
 def get_stats_data():
-    file_id = request.args.get('file_id')
+    file_id = session.get('file_id')
+    if not file_id: return jsonify({"error": "No active session"}), 403
+
     filepath = os.path.join(TEMP_DIR, f"{file_id}.csv")
-    if not os.path.exists(filepath):
-        return jsonify({"error": "File not found"}), 404
+    if not os.path.exists(filepath): return jsonify({"error": "File not found"}), 404
 
     try:
-        # Load the predictions
         df = pd.read_csv(filepath)
-
-        # Basic Stats
         total_tx = len(df)
         total_fraud = int(df['fraud_prediction'].sum())
         fraud_pct = round((total_fraud / total_tx) * 100, 2) if total_tx > 0 else 0
 
-        # Top 5 Suspicious Transactions
-        # Ensure transaction_id exists, otherwise fallback to row index
         if 'transaction_id' not in df.columns:
             df['transaction_id'] = ["TXN_" + str(i) for i in df.index]
             
         top_sus = df.sort_values(by='fraud_probability', ascending=False).head(5)
         top_list = top_sus[['transaction_id', 'fraud_probability']].to_dict(orient='records')
 
-        # Probability Distribution (For the Bar Chart)
         bins = [0, 20, 40, 60, 80, 100]
         labels = ['0-20%', '20-40%', '40-60%', '60-80%', '80-100%']
         df['prob_bin'] = pd.cut(df['fraud_probability'], bins=bins, labels=labels, include_lowest=True)

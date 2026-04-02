@@ -13,6 +13,8 @@
         h1 { margin: 0; font-size: 22px; color: #4dabf7; }
         .btn-back { background-color: #333; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn-back:hover { background-color: #444; }
+        .btn-danger { background-color: #a4262c; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-left: 10px; }
+        .btn-danger:hover { background-color: #8c1d22; }
 
         /* Dashboard Grid Layout */
         .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: auto 1fr; gap: 15px; flex-grow: 1; min-height: 0; }
@@ -42,7 +44,8 @@
     <div class="header">
         <h1>📊 Data Intelligence & Stats</h1>
         <div>
-            <button class="btn-back" onclick="window.history.back()">🔙 Back to Workspace</button>
+            <button class="btn-back" onclick="window.history.back()">🔙 Back</button>
+            <button class="btn-danger" onclick="cancelAndRestart()" id="cancelBtn">🗑️ Clear Data</button>
         </div>
     </div>
 
@@ -84,18 +87,21 @@
                     </tr>
                 </thead>
                 <tbody id="susTableBody">
-                    </tbody>
+                </tbody>
             </table>
         </div>
     </div>
 
     <script>
-        const fileId = "{{ file_id }}";
-
         async function loadStats() {
             try {
-                const response = await fetch(`/api/stats_data?file_id=${fileId}`);
+                const response = await fetch(`/api/stats_data`);
                 const data = await response.json();
+                
+                if (data.error) {
+                    window.location.href = '/';
+                    return;
+                }
 
                 // 1. Update Cards
                 document.getElementById('valTotal').textContent = data.total.toLocaleString();
@@ -151,6 +157,19 @@
 
             } catch (err) {
                 console.error("Failed to load stats:", err);
+            }
+        }
+
+        async function cancelAndRestart() {
+            const btn = document.getElementById('cancelBtn');
+            btn.disabled = true;
+            btn.textContent = '🗑️ Deleting...';
+            try {
+                await fetch('/cancel_session', { method: 'POST' });
+                window.location.href = '/';
+            } catch (err) {
+                console.error(err);
+                window.location.href = '/';
             }
         }
 
